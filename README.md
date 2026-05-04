@@ -43,8 +43,7 @@ sudo apt install libnet-ldap-perl libxml-libxml-perl
 1. Descarga el script directamente en tu servidor o clona el repositorio:
 
 ```bash
-git clone [https://github.com/tu-usuario/check-rayuela-teachers.git](https://github.com/tu-usuario/check-rayuela-teachers.git)
-cd check-rayuela-teachers
+
 ```
 
 2. Otorga permisos de ejecución al archivo:
@@ -74,8 +73,8 @@ my $ou_group    = "ou=Group,$base_dn";
 Descarga el script directamente en tu servidor o clona el repositorio:
 
 ```bash
-git clone [https://github.com/tu-usuario/check-rayuela-teachers.git](https://github.com/tu-usuario/check-rayuela-teachers.git)
-cd check-rayuela-teachers
+cd /usr/local/sbin/
+wget https://raw.githubusercontent.com/algodelinux/check-rayuela-teachers/refs/heads/main/check-rayuela-teachers
 ```
 
 Otorga permisos de ejecución al archivo:
