@@ -40,36 +40,6 @@ sudo apt install libnet-ldap-perl libxml-libxml-perl
 
 ## 📥 Instalación
 
-1. Descarga el script directamente en tu servidor o clona el repositorio:
-
-```bash
-
-```
-
-2. Otorga permisos de ejecución al archivo:
-
-```bash
-chmod +x check-rayuela-teachers
-```
-
----
-
-## ⚙️ Configuración
-
-Antes de la primera ejecución, es obligatorio editar las variables de configuración al inicio del script para que coincidan con la red y estructura de tu centro:
-
-```perl
-# Configuración en las líneas 7-10 del script:
-my $ldap_server = "ip-servidor-ldap";           # IP de tu servidor LDAP (ej. 192.168.1.250)
-my $base_dn     = "dc=instituto,dc=extremadura,dc=es"; 
-my $ou_people   = "ou=People,$base_dn";
-my $ou_group    = "ou=Group,$base_dn";
-```
-
----
-
-## 📥 Instalación
-
 Descarga el script directamente en tu servidor o clona el repositorio:
 
 ```bash
