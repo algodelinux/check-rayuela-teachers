@@ -1,4 +1,4 @@
-# Check-Rayuela-Teachers 🏫🔍
+# check-rayuela-teachers 🏫🔍
 
 Herramienta de administración para centros educativos de Extremadura. Permite sincronizar las cuentas de usuario de los servidores del centro con la exportación oficial de datos de **Rayuela**, automatizando la detección y limpieza del profesorado que ya no pertenece a la plantilla.
 
