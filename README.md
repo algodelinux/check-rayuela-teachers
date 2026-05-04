@@ -90,6 +90,8 @@ El script mostrará un resumen por pantalla y creará automáticamente:
 
 * borrar_homes_profesores.sh: Script ejecutable para borrar las carpetas de usuario en el servidor de archivos.
 
+---
+
 ### 🧹 Flujo de Trabajo Seguro
 
 El script no realiza cambios directos de forma automática para evitar errores fatales. Sigue este orden para aplicar los cambios una vez revisados los ficheros generados:
