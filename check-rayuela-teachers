@@ -1,0 +1,119 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+use Net::LDAP;
+use XML::LibXML;
+
+# Configuración
+my $ldap_server = "ip-servidor-ldap"; 
+my $base_dn     = "dc=instituto,dc=extremadura,dc=es"; 
+my $ou_people   = "ou=People,$base_dn";
+my $ou_group    = "ou=Group,$base_dn";
+
+my $xml_path    = $ARGV[0] or die "Uso: $0 <ExportacionDatosProfesorado.xml> [lista_ignorados.txt]\n";
+my $ignore_path = $ARGV[1]; # Segundo argumento opcional
+
+my $output_ldif = "bajas_profesores.ldif";
+my $output_sh   = "borrar_homes_profesores.sh";
+
+# Limpieza de archivos previos
+unlink $output_ldif if -e $output_ldif;
+unlink $output_sh   if -e $output_sh;
+
+# Cargar lista de ignorados (si existe)
+my %ignorar;
+if ($ignore_path and -e $ignore_path) {
+    print "🛡️ Cargando lista de excepciones desde $ignore_path...\n";
+    open(my $fh_ignore, '<', $ignore_path) or die "No se pudo abrir $ignore_path: $!";
+    while (my $line = <$fh_ignore>) {
+        chomp $line;
+        $line =~ s/^\s+|\s+$//g; # Limpiar espacios
+        $ignorar{$line} = 1 if $line ne "";
+    }
+    close($fh_ignore);
+}
+
+# Parseo del XML de Profesores
+print "📖 Leyendo XML de profesorado...\n";
+my %logins_xml;
+my $dom = XML::LibXML->load_xml(location => $xml_path);
+
+foreach my $profesor ($dom->findnodes('//profesor')) {
+    my $login = $profesor->findvalue('./datos-usuario-rayuela/login');
+    $logins_xml{$login} = 1 if $login;
+}
+
+# Conexión y Consulta LDAP
+print "🔍 Consultando profesores en LDAP...\n";
+my $ldap = Net::LDAP->new($ldap_server) or die "$@";
+$ldap->bind; 
+
+my $mesg = $ldap->search(
+    base   => $ou_people,
+    filter => "(objectClass=posixAccount)",
+    attrs  => ['uid', 'homeDirectory']
+);
+
+# Generación de Archivos de Salida
+open(my $fh_ldif, '>', $output_ldif) or die "No se pudo crear $output_ldif: $!";
+open(my $fh_sh,   '>', $output_sh)   or die "No se pudo crear $output_sh: $!";
+
+print $fh_sh "#!/bin/bash\n# Script para borrar carpetas de profesores\n\n";
+
+my $sobrantes = 0;
+foreach my $entrada ($mesg->entries) {
+    my $uid  = $entrada->get_value('uid');
+    my $home = $entrada->get_value('homeDirectory') || "";
+    my $user_dn = $entrada->dn();
+
+    # FILTRO: Solo /home/profesor/ que NO están en XML y NO están en lista de ignorados
+    if ($home =~ m|^/home/profesor/| && !exists $logins_xml{$uid}) {
+        
+        # Comprobar si el usuario está en la lista blanca
+        if (exists $ignorar{$uid}) {
+            print "⚠️ Ignorando borrado de $uid (incluido en lista de excepciones)\n";
+            next;
+        }
+
+        # LDIF: Borrar Usuario
+        print $fh_ldif "# Profesor: $uid\n";
+        print $fh_ldif "dn: $user_dn\n";
+        print $fh_ldif "changetype: delete\n\n";
+        
+        # LDIF: Borrar Grupo Personal
+        my $group_search = $ldap->search(
+            base   => $ou_group,
+            filter => "(&(objectClass=posixGroup)(cn=$uid))",
+            attrs  => ['dn']
+        );
+        
+        if ($group_search->count > 0) {
+            my $group_dn = $group_search->entry(0)->dn();
+            print $fh_ldif "dn: $group_dn\n";
+            print $fh_ldif "changetype: delete\n\n";
+        }
+        
+        # Shell: Borrar Home
+        print $fh_sh "echo \"Eliminando home profesor: $home\"\n";
+        print $fh_sh "rm -rf \"$home\"\n";
+        
+        $sobrantes++;
+    }
+}
+
+close($fh_ldif);
+close($fh_sh);
+chmod(0755, $output_sh);
+$ldap->unbind;
+
+# Mensaje Informativo Final
+print "\n" . "=" x 60 . "\n";
+print "✅ PROCESO DE PROFESORADO FINALIZADO\n";
+print "=" x 60 . "\n";
+print "📊 Profesores detectados para borrar: $sobrantes\n\n";
+print "Comandos para la limpieza:\n\n";
+print "1️⃣  LDAP:\n";
+print "   ldapmodify -x -H ldap://$ldap_server -D \"cn=admin,ou=People,dc=instituto,dc=extremadura,dc=es\" -W -f $output_ldif\n\n";
+print "2️⃣  HOMES:\n";
+print "   ./$output_sh\n";
+print "=" x 60 . "\n";
